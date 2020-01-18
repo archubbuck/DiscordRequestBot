@@ -1,0 +1,12 @@
+{
+    "name": "discord-request-bot",
+    "version": "1.0.0",
+    "description": "An intelligent Discord bot for handling requests created on Discord servers.",
+    "main": "bot.js",
+    "author": "Adam Chubbuck",
+    "dependencies": {
+        "discord.io": "^2.5.3",
+        "discord.js": "^11.5.1",
+        "winston": "^3.2.1"
+    }
+}
