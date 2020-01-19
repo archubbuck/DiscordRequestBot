@@ -50,64 +50,68 @@ client.on("message", async message => {
     const args = message.content.slice(config.prefix.length).trim().split(/ +/g);
     const command = args.shift().toLowerCase();
 
-    if (command === "request") {
-        const requestMessage = args.join(" ");
+    const marketRequestsChannel = message.guild.channels.find(c => c.name.toLowerCase() === "requests".toLowerCase() &&
+                c.parent && c.parent.name.toLowerCase() === "market".toLowerCase());
 
-        const marketRequestsChannel = message.guild.channels.find(c => c.name.toLowerCase() === "requests".toLowerCase()
-            && c.parent && c.parent.name.toLowerCase() === "market".toLowerCase());
+    const messageContent = args.join(" ");
+    switch (command) {
+        case "request":
+            if (message.channel != marketRequestsChannel)
+                return message.reply(`this command can only be used in the <#${marketRequestsChannel.id}> channel.`);
 
-        if (message.channel != marketRequestsChannel) {
-            message.reply(`This command can only be used in the <#${marketRequestsChannel.id}> channel.`);
-            return;
-        }
+            if (!messageContent)
+                return message.reply("please provide a brief description of your request.");
 
-        let requestsCategory = message.guild.channels.find(c => c.name.toLowerCase() == "requests".toLowerCase() 
-            && c.type.toLowerCase() == "category".toLowerCase());
-        const channelOptions = {
-            type: "text",
-            parent: requestsCategory,
-            topic: requestMessage,
-            permissionOverwrites: [{
-                    id: message.author.id,
-                    allow: ["VIEW_CHANNEL"]
-                },
-                {
-                    id: message.guild.roles.find('name', '@everyone').id,
-                    deny: ["VIEW_CHANNEL"]
-                }
-            ]
-        };
-        message.guild.createChannel(`${message.author.username}-${makeid(6)}`, channelOptions).then(channel => {
+            let requestsCategory = message.guild.channels.find(c => c.name.toLowerCase() == "requests".toLowerCase() &&
+                c.type.toLowerCase() == "category".toLowerCase());
+            const channelOptions = {
+                type: "text",
+                parent: requestsCategory,
+                topic: messageContent,
+                permissionOverwrites: [{
+                        id: message.author.id,
+                        allow: ["VIEW_CHANNEL"]
+                    },
+                    {
+                        id: message.guild.roles.find('name', '@everyone').id,
+                        deny: ["VIEW_CHANNEL"]
+                    }
+                ]
+            };
+            message.guild.createChannel(`${message.author.username}-${makeid(6)}`, channelOptions).then(channel => {
+                let messages = [
+                    `Hello <@${message.author.id}>. Please wait patiently for an <@&${message.guild.roles.find('name', 'Admin').id}> to join the chat.`,
+                    `**RID:** ${channel.name.split("-")[1]}`,
+                    `**Request:** ${channel.topic}`
+                ];
+                channel.send(messages.join("\n"));
+                // message.reply(`Your request has been submitted and a private channel has been created for you. Please join <#${channel.id}>.`);
+            });
+            break;
+        case "close":
+            if (!messageContent)
+                return message.reply("Please provide a reason for closing this channel.");
+
+            if (!message.channel.parent || message.channel.parent.name != "Requests")
+                return message.reply("Sorry, you can't close this channel!");
+
+            let marketArchiveChannel = message.guild.channels.find(c => c.name.toLowerCase() === "archive" &&
+                c.parent && c.parent.name.toLowerCase() === "market");
             let messages = [
-                `**RID:** ${channel.name.split("-")[1]}`,
-                `**Request:** ${channel.topic}`,
-                `**Instructions:** Please wait patiently for an Admin to join the chat.`
+                `**RID:** ${message.channel.name.split("-")[1]}`,
+                `**Request:** ${message.channel.topic}`,
+                `**Closed By:** <@${message.author.id}>`,
+                `**Notes:** ${messageContent}`
             ];
-            channel.send(messages.join("\n"));
-            message.reply(`Your request has been submitted and a private channel has been created for you. Please join <#${channel.id}>.`);
-        });
-    }
-
-    if (command === "close") {
-        const closeMessage = args.join(" ");
-        console.log(closeMessage);
-
-        if (!closeMessage)
-            return message.reply("Please provide a reason for closing this channel.");
-
-        if (!message.channel.parent || message.channel.parent.name != "Requests")
-            return message.reply("Sorry, you can't close this channel!");
-
-        let archiveChannel = message.guild.channels.find(c => c.name.toLowerCase() === "requests".toLowerCase()
-            && c.parent && c.parent.name.toLowerCase() === "archive".toLowerCase());
-        let messages = [
-            `**RID:** ${message.channel.name.split("-")[1]}`,
-            `**Request:** ${message.channel.topic}`,
-            `**Closed By:** ${message.author.username}`,
-            `**Notes:** ${closeMessage}`
-        ];
-        archiveChannel.send(messages.join("\n"));
-        message.channel.delete();
+            marketArchiveChannel.send(messages.join("\n"));
+            message.channel.delete();
+            const user = message.channel.members.find(m => !m.roles.some(r => r.name.toLowerCase() === "admin"));
+            let marketVouchesChannel = message.guild.channels.find(c => c.name.toLowerCase() === "vouches" &&
+                c.parent && c.parent.name.toLowerCase() === "market");
+            marketRequestsChannel.send(`Thank you for your request, <@${user.id}>. Please spend a few moments commenting on your experience in the <#${marketVouchesChannel.id}> channel. Customers who provide their feedback will be entered to win prizes!`);
+            break;
+        default:
+            return message.reply("that command was not recognized.");
     }
 });
 
